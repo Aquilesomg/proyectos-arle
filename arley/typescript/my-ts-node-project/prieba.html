@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Document Scanner Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .file-input-label {
+            transition: all 0.2s ease-in-out;
+        }
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        #results-container {
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">Intelligent Document Scanner</h1>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">Upload a document to see it automatically classified and organized.</p>
+        </div>
+
+        <!-- File Upload Section -->
+        <div class="mb-8">
+            <label for="file-upload" class="file-input-label cursor-pointer w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600">
+                <svg class="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-4-4V6a4 4 0 014-4h10a4 4 0 014 4v6a4 4 0 01-4 4H7z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 16v1a2 2 0 01-2 2H3a2 2 0 01-2-2V7a2 2 0 012-2h2m12 11v-3a2 2 0 00-2-2H9a2 2 0 00-2 2v3"></path></svg>
+                <p id="file-name" class="mt-2 text-sm font-medium text-gray-600 dark:text-gray-300">Click to upload or drag and drop</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">PDF, PNG, JPG (simulated)</p>
+            </label>
+            <input id="file-upload" type="file" class="hidden">
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-container" class="opacity-0 transform -translate-y-4 space-y-6">
+            <div id="loading-spinner" class="hidden flex items-center justify-center space-x-2">
+                 <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-gray-500 dark:text-gray-400">Analyzing document...</span>
+            </div>
+
+            <div id="result-content" class="hidden space-y-6">
+                 <!-- Document Type -->
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Detected Document Type</h3>
+                    <p id="doc-type" class="mt-1 text-lg font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 px-3 py-1.5 rounded-lg inline-block"></p>
+                </div>
+
+                <!-- New Filename -->
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Generated Filename</h3>
+                    <p id="new-filename" class="mt-1 text-lg font-mono bg-gray-100 dark:bg-gray-700 p-3 rounded-lg"></p>
+                </div>
+
+                <!-- Folder Structure -->
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Hierarchical Folder Path</h3>
+                    <div id="folder-path" class="mt-2 text-sm bg-gray-100 dark:bg-gray-700 p-3 rounded-lg flex items-center space-x-2 flex-wrap"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- MOCK DATA AND SIMULATION LOGIC ---
+
+        const mockTextData = {
+            invoice: `
+                Quantum Innovations Inc.
+                BILL TO: Hyperion Corp
+                Invoice No. #INV-84321
+                Date: May 15, 2025
+                Item: Graviton Stabilizer, Quantity: 2, Price: $1500.00
+                Total Amount: $3000.00
+                Due Date: 06/14/2025
+            `,
+            academic_math: `
+                Abstract
+                This paper explores advanced applications of Riemann integrals in multi-dimensional space.
+                Our focus is on the practical implementation of these mathematical concepts in physics simulations.
+                Keywords: Mathematics, Integrals, Riemann Hypothesis, Applied Physics
+            `,
+            academic_python: `
+                Title: Object-Oriented Programming Paradigms in Modern Python
+                Author: Dr. Ada Lovelace
+                Introduction: Python's evolution as a programming language has cemented the importance of OOP principles. 
+                We will discuss encapsulation, inheritance, and polymorphism with practical examples.
+            `
+        };
+
+        // --- DOM ELEMENTS ---
+        const fileUpload = document.getElementById('file-upload');
+        const fileNameDisplay = document.getElementById('file-name');
+        const resultsContainer = document.getElementById('results-container');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const resultContent = document.getElementById('result-content');
+        const docTypeDisplay = document.getElementById('doc-type');
+        const newFilenameDisplay = document.getElementById('new-filename');
+        const folderPathDisplay = document.getElementById('folder-path');
+
+        fileUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                fileNameDisplay.textContent = file.name;
+                processDocument(file);
+            }
+        });
+        
+        // --- CORE LOGIC ---
+
+        function processDocument(file) {
+            // 1. Show loading state
+            resultContent.classList.add('hidden');
+            resultsContainer.style.opacity = '1';
+            resultsContainer.style.transform = 'translateY(0)';
+            loadingSpinner.classList.remove('hidden');
+
+            // Simulate API call and processing delay
+            setTimeout(() => {
+                // 2. Simulate OCR: In a real app, this would be an API call to a Python backend.
+                // Here, we just pick a mock text based on the filename for demonstration.
+                const ocrText = mockOcr(file.name);
+
+                // 3. Simulate Classification
+                const docType = classifyDocument(ocrText);
+
+                // 4. Simulate Intelligent Renaming
+                const newFilename = generateFilename(ocrText, docType, file.name.split('.').pop());
+
+                // 5. Simulate Hierarchical Organization
+                const folderPath = getFolderPath(docType, ocrText);
+
+                // 6. Update UI with results
+                displayResults(docType, newFilename, folderPath);
+                
+                loadingSpinner.classList.add('hidden');
+                resultContent.classList.remove('hidden');
+
+            }, 1500); // 1.5 second delay
+        }
+        
+        function mockOcr(filename) {
+            if (filename.toLowerCase().includes('invoice')) return mockTextData.invoice;
+            if (filename.toLowerCase().includes('math')) return mockTextData.academic_math;
+            if (filename.toLowerCase().includes('python') || filename.toLowerCase().includes('oop')) return mockTextData.academic_python;
+            return mockTextData.invoice; // Default
+        }
+
+        function classifyDocument(text) {
+            const lowerText = text.toLowerCase();
+            if (lowerText.includes('invoice no') || lowerText.includes('bill to')) {
+                return 'Invoice';
+            }
+            if (lowerText.includes('abstract') || lowerText.includes('keywords') || lowerText.includes('introduction')) {
+                return 'Academic Paper';
+            }
+            return 'Uncategorized';
+        }
+
+        function generateFilename(text, docType, extension) {
+            const cleanText = (str) => str.replace(/[^a-zA-Z0-9]/g, '');
+            
+            if (docType === 'Invoice') {
+                const vendorMatch = text.match(/^.*?\n/);
+                const vendor = vendorMatch ? cleanText(vendorMatch[0]) : 'Vendor';
+                
+                const dateMatch = text.match(/Date: (\w+ \d{1,2}, \d{4})/);
+                let dateStr = 'May2025';
+                if(dateMatch && dateMatch[1]){
+                    const d = new Date(dateMatch[1]);
+                    dateStr = d.toLocaleString('default', { month: 'long' }) + d.getFullYear();
+                }
+
+                const invoiceNumMatch = text.match(/[Ii]nvoice\s?[Nn]o\.?\s?#?([A-Z0-9-]+)/);
+                const invoiceNum = invoiceNumMatch ? invoiceNumMatch[1] : 'NoID';
+
+                return `Invoice_${vendor}_${dateStr}_${invoiceNum}.${extension}`;
+            }
+
+            if (docType === 'Academic Paper') {
+                const titleMatch = text.match(/(Title:|Abstract|Introduction)\n?([\s\S]*?)\n/);
+                let title = 'Untitled';
+                if (titleMatch && titleMatch[2]) {
+                    title = titleMatch[2].trim().split(' ').slice(0, 4).join('_');
+                }
+                
+                const topic = getTopic(text.toLowerCase());
+                return `${topic}_${cleanText(title)}.${extension}`;
+            }
+
+            return `ScannedDoc_${new Date().getTime()}.${extension}`;
+        }
+        
+        function getTopic(lowerText) {
+            if (lowerText.includes('python') && lowerText.includes('oop')) return 'Python_OOP';
+            if (lowerText.includes('python')) return 'Python';
+            if (lowerText.includes('mathematics') || lowerText.includes('integral')) return 'Math';
+            return 'Research';
+        }
+
+        function getFolderPath(docType, text) {
+            const basePath = ['Documents', 'Ruben'];
+            if (docType === 'Invoice') {
+                return [...basePath, 'Invoices'];
+            }
+            if (docType === 'Academic Paper') {
+                const topic = getTopic(text.toLowerCase());
+                const path = [...basePath, 'University'];
+                if(topic.includes('Python')) path.push('Programming');
+                if(topic.includes('Math')) path.push('Mathematics');
+                topic.split('_').forEach(sub => path.push(sub));
+                return path;
+            }
+            return [...basePath, 'Uncategorized'];
+        }
+
+        function displayResults(docType, newFilename, folderPath) {
+            docTypeDisplay.textContent = docType;
+            newFilenameDisplay.textContent = newFilename;
+            
+            folderPathDisplay.innerHTML = ''; // Clear previous path
+            folderPath.forEach((folder, index) => {
+                const folderEl = document.createElement('span');
+                folderEl.className = 'font-mono';
+                folderEl.textContent = folder;
+                
+                folderPathDisplay.appendChild(folderEl);
+
+                if (index < folderPath.length - 1) {
+                    const separatorEl = document.createElement('span');
+                    separatorEl.className = 'text-gray-400 dark:text-gray-500';
+                    separatorEl.textContent = '/';
+                    folderPathDisplay.appendChild(separatorEl);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

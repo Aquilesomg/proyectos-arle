@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simulador de Cola</title>
+</head>
+<body>
+    <h1>Simulador de Atención al Cliente</h1>
+    <p id="estadoCola">Clientes en cola: 0</p>
+    <p id="estadoTiempo">Tiempo para siguiente atención: esperando...</p>
+    <button onclick="agregarCliente()">Agregar cliente</button>
+    <button onclick="mostrarCola()">Ver cola</button>
+
+    <script>
+        let cola = [];
+        const MAX_COLA = 7;
+        const tiempoEspera = 10;
+        let atendiendo = false;
+        let tiempoRestante = 0;
+
+        const actualizarEstado = () => {
+            document.getElementById("estadoCola").textContent =
+                `Clientes en cola: ${cola.length}/${MAX_COLA}`;
+            document.getElementById("estadoTiempo").textContent =
+                `Tiempo para siguiente atención: ${atendiendo ? tiempoRestante + "s" : "esperando..."}`;
+        };
+
+        const agregarCliente = () => {
+            if (cola.length >= MAX_COLA) {
+                alert("La cola está llena. No se pueden agregar más clientes.");
+                return;
+            }
+            let nombre = prompt("Ingresa el nombre del cliente:");
+            while (!nombre || !isNaN(nombre)) {
+                alert("Nombre inválido.");
+                nombre = prompt("Ingresa el nombre del cliente:");
+            }
+            cola.push(nombre);
+            alert(`Cliente "${nombre}" agregado a la cola.`);
+            actualizarEstado();
+            if (!atendiendo) atenderCliente();
+        };
+
+        const atenderCliente = () => {
+            if (cola.length === 0) {
+                atendiendo = false;
+                actualizarEstado();
+                return;
+            }
+
+            atendiendo = true;
+            let cliente = cola.shift();
+            tiempoRestante = tiempoEspera;
+            actualizarEstado();
+
+            const intervalo = setInterval(() => {
+                tiempoRestante--;
+                actualizarEstado();
+                if (tiempoRestante <= 0) {
+                    clearInterval(intervalo);
+                    alert(`Cliente ${cliente} atendido.`);
+                    atenderCliente();
+                }
+            }, 1000);
+        };
+
+        const mostrarCola = () => {
+            let estado = "Clientes en cola:\n";
+            if (cola.length === 0) {
+                estado += "La cola está vacía.";
+            } else {
+                for (let i = 0; i < cola.length; i++) {
+                    estado += `${i + 1}. ${cola[i]}\n`;
+                }
+            }
+            estado += `\nTotal: ${cola.length} / ${MAX_COLA}`;
+            alert(estado);
+        };
+
+        actualizarEstado();
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES6",            // Versión de JS a la que compilaremos (ES6+)
+    "module": "commonjs",       // Sistema de módulos usado por Node.js
+    "strict": true,             // Activa un conjunto de chequeos más estrictos
+    "esModuleInterop": true,    // Facilita importar módulos comunes de JS
+    "outDir": "./dist",         // Carpeta donde irán los .js compilados
+    "rootDir": "./src"          // Carpeta donde vivirán nuestros .ts
+  },
+  "include": ["src/**/*.ts"],    // Incluir todos los .ts dentro de src/
+  "exclude": ["node_modules"]    // Excluir node_modules (no queremos compilar dependencias)
+}
